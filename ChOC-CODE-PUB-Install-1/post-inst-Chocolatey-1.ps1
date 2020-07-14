@@ -4,4 +4,4 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; Invoke-Expression ((New-Object
 #Install Software
 choco install visualstudiocode -y
 choco install git -y
-#choco install nodejs-lts  -y
+choco install nodejs-lts  -y
