@@ -12,7 +12,8 @@ az vm create --resource-group $rgname \
 --name myVM \
 --image UbuntuLTS \
 --admin-username azureuser \
---generate-ssh-keys \
+--admin-password 'adminadmin123!' \
+# --generate-ssh-keys \
 --verbose
 
 # Open port 80 to allow web traffic to host.
