@@ -1,3 +1,10 @@
+# read -p 'Azure Resource Group Name to Create?' rgnamecreate
+# read -p 'What Azure Location would you like to use?' azlocation
+# read -p 'Name of the Registry to create? ' registryname
+# read -p 'Registry Login Server Name? ' regname
+# echo
+# echo Thank you! Creating Now.
+
 Registry Name: dsddockconttst1
 Logon Server - Container Registry: dsddockconttst1.azurecr.io
 
