@@ -17,7 +17,10 @@ az group create --name FMGDOKRTST1 --location centralus
 
 az acr create --resource-group FMGDOKRTST1 --name dsddockconttst1 --sku Basic
 
-az acr login --name dsddockconttst1
+az acr login --name dsddockconttst1 # requires Docker
+
+# Does not require Docker:
+az acr login -n dsddockconttst2 --expose-token
 
 Get the full login server name for your Azure container registry: az acr show --name dsddockconttst1 --query loginServer --output table
 
