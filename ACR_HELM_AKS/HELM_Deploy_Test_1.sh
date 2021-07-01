@@ -73,5 +73,72 @@ name: webfrontend
 # incremented each time you make changes to the application.
 appVersion: v1
 
+## Install app using HELM Chart:
 
+helm install webfrontend webfrontend/
+
+## Monitor with kubectl:
+
+kubectl get service --watch
+
+kubectl get --namespace default svc -w webfrontend (webfrontend = app name)
+
+## Delete the Cluster
+
+az group delete --name ACRTEST-HELM-1 --yes --no-wait
+
+## HOLDER
+
+C:\>az acr create --resource-group ACRTEST-HELM-1 --name dsdhelmacr1 --sku Basic
+{
+  "adminUserEnabled": false,
+  "anonymousPullEnabled": false,
+  "creationDate": "2021-07-01T13:44:27.311352+00:00",
+  "dataEndpointEnabled": false,
+  "dataEndpointHostNames": [],
+  "encryption": {
+    "keyVaultProperties": null,
+    "status": "disabled"
+  },
+  "id": "/subscriptions/5e2e06fc-9b86-4a65-a1fa-b11d522ee3ac/resourceGroups/ACRTEST-HELM-1/providers/Microsoft.ContainerRegistry/registries/dsdhelmacr1",
+  "identity": null,
+  "location": "centralus",
+  "loginServer": "dsdhelmacr1.azurecr.io",
+  "name": "dsdhelmacr1",
+  "networkRuleBypassOptions": "AzureServices",
+  "networkRuleSet": null,
+  "policies": {
+    "quarantinePolicy": {
+      "status": "disabled"
+    },
+    "retentionPolicy": {
+      "days": 7,
+      "lastUpdatedTime": "2021-07-01T13:44:28.744885+00:00",
+      "status": "disabled"
+    },
+    "trustPolicy": {
+      "status": "disabled",
+      "type": "Notary"
+    }
+  },
+  "privateEndpointConnections": [],
+  "provisioningState": "Succeeded",
+  "publicNetworkAccess": "Enabled",
+  "resourceGroup": "ACRTEST-HELM-1",
+  "sku": {
+    "name": "Basic",
+    "tier": "Basic"
+  },
+  "status": null,
+  "systemData": {
+    "createdAt": "2021-07-01T13:44:27.311352+00:00",
+    "createdBy": "David.Dracoules@appliedis.com",
+    "createdByType": "User",
+    "lastModifiedAt": "2021-07-01T13:44:27.311352+00:00",
+    "lastModifiedBy": "David.Dracoules@appliedis.com",
+    "lastModifiedByType": "User"
+  },
+  "tags": {},
+  "type": "Microsoft.ContainerRegistry/registries",
+  "zoneRedundancy": "Disabled"
 
