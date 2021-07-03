@@ -42,3 +42,18 @@ Disable Addons: minikube addons disable <name>
 
 - PowerShell: minikube -p minikube docker-env | Invoke-Expression
 - CMD Prompt: @FOR /f "tokens=* delims=^L" %i IN ('minikube docker-env') DO %i
+
+## Create and add Images to Minikube (cluster)
+
+- Make sure the above Output command has been run (console needs to be attached to minikube)
+- Run: kubectl run some-node-proj --image=my-awesome-local-image:v1 --image-pull-policy=IfNotPresent
+
+## Delete Images
+
+- Open Web console and look at deployments. Delete if issues. You cannot delete images if the deployment has not completed. It is cached.
+
+  - URL: https://minikube.sigs.k8s.io/docs/commands/image/
+
+- CMD to delete images:
+  - minikube image unload image image_name
+  - minikube image rm image_name
