@@ -17,6 +17,7 @@
 - minikube dashboard
 - Interact with minikube cluster: kubectl create deployment hello-minikube --image=k8s.gcr.io/echoserver:1.4
 - Expose Port: kubectl expose deployment hello-minikube --type=NodePort --port=8080
+- Forward Port: kubectl port-forward service/hello-minikube 7080:8080
 - Open exposed port: minikube service hello-minikube
 - Upgrade cluster: minikube start --kubernetes-version=latest
 - Start a second local cluster: minikube start -p cluster2
