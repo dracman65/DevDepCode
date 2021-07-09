@@ -25,3 +25,24 @@ metadata: # object
     volumeMounts: #list of objects
     - name: nginx-vol
       mountPath: /usr/nginx/html
+    - name: sidecar-container
+      image: curlimages/curl
+      command: ["bin/sh"]
+      args: ["-c", "echo Hello from the sidecar container; sleep 300"]
+
+##############################
+
+## YAML - Run Script
+
+command:
+  - sh
+  - -c
+  - |
+    #!/usr/bin/env bash -e
+    http () {
+        local path="${1}"
+        set -- -XGET -s --fail
+        # add more here if you wish
+        curl -k "$@" "http://localhost:5601${path}"
+    }
+    http: "/app/kibana"
