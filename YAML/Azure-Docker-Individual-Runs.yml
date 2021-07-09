@@ -1,0 +1,207 @@
+trigger:
+  paths:
+    exclude:
+      - azure-pipelines.yml
+      - readme.md
+  branches:
+    include: 
+    - usr/dsd/dsd-dce-time-plat-02
+    exclude:
+      - main
+
+resources:
+  repositories:
+    - repository: DevOps_Templates
+      type: git
+      name: DCE/DevOps_Templates
+      ref: refs/heads/master
+
+variables:
+   major: 0
+   minor: 0
+   isMain: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+
+name: $(major).$(minor)$(Rev:.r)
+
+stages:
+#- template: gh_superlint.yml@DevOps_Templates
+
+- stage: core_build
+  dependsOn: [ ui_build_user_mgmt,ui_security_build ]
+  displayName: core build
+  jobs:
+    - job: core_build_docker
+      workspace:
+       clean: all
+      displayName: Datahub, Graphql, Security
+      pool:
+        image: 'ubuntu-latest'
+      steps:
+      - task: DownloadPipelineArtifact@2
+        displayName:  Retrieve Artifact UI-SECURITY-AUTHENTICATE
+        inputs:
+          buildType: 'current'
+          artifactName: 'ui-security-authenticate'
+          targetPath: '$(Pipeline.Workspace)/docker'
+      - task: DownloadPipelineArtifact@2
+        displayName:  Retrieve Artifact UI-SECURITY-USER-MANAGEMENT
+        inputs:
+          buildType: 'current'
+          artifactName: 'ui-security-user-management'
+          targetPath: '$(Pipeline.Workspace)/docker'
+      - script: |
+         ls -ll $(Pipeline.Workspace)/docker/
+         for f in $(Pipeline.Workspace)/docker/*.tar; do docker load --input $f; done
+        displayName: Load Docker Spa Images
+      - task: DockerCompose@0
+        displayName: Docker-compose up
+        inputs:
+          containerregistrytype: 'Azure Container Registry'
+          azureSubscription: 'FMZ-N-SUB-WLZ-01 (14be6287-b0a1-4063-a57c-1da1c33ee2b3)'
+          azureContainerRegistry: '{"loginServer":"devfmzacr.azurecr.io", "id" : "/subscriptions/14be6287-b0a1-4063-a57c-1da1c33ee2b3/resourceGroups/fmz-e-n-rgp-acr-01/providers/Microsoft.ContainerRegistry/registries/devfmzacr"}'
+          dockerComposeFile: '**/docker-compose.yml'
+          action: 'Run a Docker Compose command'
+          dockerComposeCommand: 'up'
+          arguments: '-d'
+          #-d db-datahub flyway hasura-datahub db-security-dce gql-bff-security etl-securitydb-to-datahub
+      - script: |
+          timeout 600 bash -c 'while [[ "$(curl --insecure -s -o /dev/null -w ''%{http_code}'' http://localhost:8080/console)" != "200" ]]; do sleep 5; done'
+        displayName: Pause for Hasura Container Startup
+      - task: DockerCompose@0
+        displayName: Perform Hasura Tests
+        inputs:
+          containerregistrytype: 'Azure Container Registry'
+          dockerComposeFile: '**/docker-compose.yml'
+          action: 'Run a Docker Compose command'
+          dockerComposeCommand: 'up'
+          currentWorkingDirectory: '$(System.DefaultWorkingDirectory)/tests'
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Hasura Test Results
+        inputs:
+          PathtoPublish: '$(System.DefaultWorkingDirectory)/tests/results'
+          ArtifactName: 'hasura-test-results'
+          publishLocation: 'Container'
+      - task: PublishTestResults@1
+        displayName: Publish Hasura Integration Tests Results
+        inputs:
+          testRunner: 'JUnit'
+          testResultsFiles: '$(System.DefaultWorkingDirectory)/tests/results/hasura-integration-tests-results.xml'
+          testRunTitle: 'Hasura-Integration-Tests'
+      - task: PublishTestResults@1
+        displayName: Publish Hasura Allow-List Tests Results
+        inputs:
+          testRunner: 'JUnit'
+          testResultsFiles: '$(System.DefaultWorkingDirectory)/tests/results/hasura-allow-list-tests-results.xml'
+          testRunTitle: 'Hasura-Allow-List-Tests'
+      - script: |
+            sudo chown -R AzDevOps $(System.DefaultWorkingDirectory) 
+        displayName: Set Filesystem Permission -> AzDevOps
+        condition: always()
+      - task: DockerCompose@0
+        displayName: Retrieve Docker-compose logs
+        inputs:
+          containerregistrytype: 'Azure Container Registry'
+          dockerComposeFile: '**/docker-compose.yml'
+          action: 'Run a Docker Compose command'
+          dockerComposeCommand: 'logs'
+          arguments: '-t'
+        condition: always()
+      - script: |
+         mkdir -p $(Pipeline.Workspace)/docker
+         docker images
+         docker save --output $(Pipeline.Workspace)/docker/etl-securitydb-to-datahub.tar devfmzacr.azurecr.io/dceplatform_etl-securitydb-to-datahub:latest
+         docker save --output $(Pipeline.Workspace)/docker/gql-bff-security.tar devfmzacr.azurecr.io/dceplatform_gql-bff-security:latest
+         ls -ll $(Pipeline.Workspace)/docker/
+        displayName: Extract Docker Images for artifact creation
+      - task: PublishPipelineArtifact@1
+        displayName: Publish docker tarballs
+        inputs:
+          targetPath: '$(Pipeline.Workspace)/docker'
+          artifact: 'core'
+          publishLocation: 'pipeline'
+    
+- stage: ui_security_build
+  dependsOn: []
+  displayName: ui-security-authenticate
+  jobs:
+    - job: ui_security_auth
+      workspace:
+       clean: all
+      displayName: ui-security-authenticate build
+      pool:
+        image: 'ubuntu-latest'
+      steps:
+      - task: DockerCompose@0
+        displayName: Docker-compose ui-security-authenticate
+        inputs:
+          containerregistrytype: 'Azure Container Registry'
+          azureSubscription: 'FMZ-N-SUB-WLZ-01 (14be6287-b0a1-4063-a57c-1da1c33ee2b3)'
+          azureContainerRegistry: '{"loginServer":"devfmzacr.azurecr.io", "id" : "/subscriptions/14be6287-b0a1-4063-a57c-1da1c33ee2b3/resourceGroups/fmz-e-n-rgp-acr-01/providers/Microsoft.ContainerRegistry/registries/devfmzacr"}'
+          dockerComposeFile: '**/docker-compose.yml'
+          action: 'Run a Docker Compose command'
+          dockerComposeCommand: 'up'
+          arguments: '-d ui-security-authenticate-example'
+      - task: DockerCompose@0
+        displayName: Retrieve Docker-compose logs
+        inputs:
+          containerregistrytype: 'Azure Container Registry'
+          dockerComposeFile: '**/docker-compose.yml'
+          action: 'Run a Docker Compose command'
+          dockerComposeCommand: 'logs'
+          arguments: '-t'
+        condition: always()
+      - script: |
+         mkdir -p $(Pipeline.Workspace)/docker
+         docker images
+         docker save --output $(Pipeline.Workspace)/docker/ui-security-authenticate.tar devfmzacr.azurecr.io/dceplatform_ui-security-authenticate:latest
+         ls -ll $(Pipeline.Workspace)/docker/
+        displayName: Extract Docker Images for artifact creation
+      - task: PublishPipelineArtifact@1
+        displayName: Publish docker tarball
+        inputs:
+          targetPath: '$(Pipeline.Workspace)/docker'
+          artifact: 'ui-security-authenticate'
+          publishLocation: 'pipeline'
+
+- stage: ui_build_user_mgmt
+  dependsOn: []
+  displayName: ui-security-user-management
+  jobs:
+    - job: ui_build_user_mgmt
+      workspace:
+       clean: all
+      displayName: ui-security-user-management build
+      pool:
+        image: 'ubuntu-latest'
+      steps:
+      - task: DockerCompose@0
+        displayName: Docker-compose Up ui-security-user-management
+        inputs:
+          containerregistrytype: 'Azure Container Registry'
+          azureSubscription: 'FMZ-N-SUB-WLZ-01 (14be6287-b0a1-4063-a57c-1da1c33ee2b3)'
+          azureContainerRegistry: '{"loginServer":"devfmzacr.azurecr.io", "id" : "/subscriptions/14be6287-b0a1-4063-a57c-1da1c33ee2b3/resourceGroups/fmz-e-n-rgp-acr-01/providers/Microsoft.ContainerRegistry/registries/devfmzacr"}'
+          dockerComposeFile: '**/docker-compose.yml'
+          action: 'Run a Docker Compose command'
+          dockerComposeCommand: 'up'
+          arguments: '-d ui-security-user-management'
+      - task: DockerCompose@0
+        displayName: Check Docker-compose Logs
+        inputs:
+          containerregistrytype: 'Azure Container Registry'
+          dockerComposeFile: '**/docker-compose.yml'
+          action: 'Run a Docker Compose command'
+          dockerComposeCommand: 'logs'
+          arguments: '-t'
+        condition: always()
+      - script: |
+         mkdir -p $(Pipeline.Workspace)/docker
+         docker images
+         docker save --output $(Pipeline.Workspace)/docker/ui-security-user-management.tar devfmzacr.azurecr.io/dceplatform_ui-security-user-management:latest
+         ls -ll $(Pipeline.Workspace)/docker/
+        displayName: Extract Docker Images for artifact creation
+      - task: PublishPipelineArtifact@1
+        displayName: Publish docker tarball
+        inputs:
+          targetPath: '$(Pipeline.Workspace)/docker'
+          artifact: 'ui-security-user-management'
+          publishLocation: 'pipeline'
