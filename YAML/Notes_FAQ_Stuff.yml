@@ -1,0 +1,48 @@
+## Formatting Example
+microservices:
+  - app: user-authentication
+    port: 9000
+    version: 1.7
+  - app: shopping-cart
+    port: 9002
+    versions: [1.9, 2.0, 2.1]
+################################
+
+## Kubernetes Example Pod Config
+
+apiVersion : v1 #key/value pair
+kind: Pod
+metadata: # object
+  name: nginx
+  labels: #object
+    app: nginx
+  spec: #object
+    containers: #list of objects
+    - name: nginx-container
+    image: nginx
+    ports: #list
+    - containerPort: 80
+    volumeMounts: #list of objects
+    - name: nginx-vol
+      mountPath: /usr/nginx/html
+    - name: sidecar-container
+      image: curlimages/curl
+      command: ["bin/sh"]
+      args: ["-c", "echo Hello from the sidecar container; sleep 300"]
+
+##############################
+
+## YAML - Run Script
+
+command:
+  - sh
+  - -c
+  - |
+    #!/usr/bin/env bash -e
+    http () {
+        local path="${1}"
+        set -- -XGET -s --fail
+        # add more here if you wish
+        curl -k "$@" "http://localhost:5601${path}"
+    }
+    http: "/app/kibana"
